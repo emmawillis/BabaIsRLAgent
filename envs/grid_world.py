@@ -19,6 +19,19 @@ class GridWorldEnv(gym.Env):
         self.size = size  # The size of the square grid
         self.window_size = 512  # The size of the PyGame window
 
+        self.pix_square_size = (
+                    self.window_size / self.size
+                )  # The size of a single grid square in pixels
+
+        # images
+        self.babaImg = pygame.image.load('imgs/baba.png')
+        self.wallImg = pygame.image.load('imgs/wall.png')
+        self.rockImg = pygame.image.load('imgs/rock.png')
+
+        self.babaImg = pygame.transform.scale(self.babaImg, (self.pix_square_size, self.pix_square_size))
+        self.wallImg = pygame.transform.scale(self.wallImg, (self.pix_square_size, self.pix_square_size))
+        self.rockImg = pygame.transform.scale(self.rockImg, (self.pix_square_size, self.pix_square_size))
+
         # Observations are dictionaries with the agent's and the target's location.
         # Each location is encoded as an element of {0, ..., `size`}^2,
         # i.e. MultiDiscrete([size, size]).
@@ -26,6 +39,12 @@ class GridWorldEnv(gym.Env):
             {
                 "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
                 "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "stop": spaces.Dict(
+                    {
+                        "wall": spaces.Sequence(spaces.Box(0, size - 1, shape=(2,), dtype=int)),
+                        "rock": spaces.Sequence(spaces.Box(0, size - 1, shape=(2,), dtype=int)),
+                    }
+                ),
             }
         )
 
@@ -58,7 +77,7 @@ class GridWorldEnv(gym.Env):
         self.clock = None
 
     def _get_obs(self):
-        return {"agent": self._agent_location, "target": self._target_location}
+        return {"agent": self._agent_location, "target": self._target_location, "stop": self._stops}
 
     def _get_info(self):
         return {
@@ -82,6 +101,12 @@ class GridWorldEnv(gym.Env):
                 0, self.size, size=2, dtype=int
             )
 
+        # choose locations according to the first level
+        self._stops = {
+            "wall": np.array([np.array([0, 0]), np.array([1, 1]), np.array([2, 2]), np.array([3, 3]), np.array([4, 4])]),
+            "rock": np.array([np.array([0, 1]), np.array([1, 3])]),
+        }
+
         observation = self._get_obs()
         info = self._get_info()
 
@@ -94,9 +119,17 @@ class GridWorldEnv(gym.Env):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
         direction = self._action_to_direction[action]
         # We use `np.clip` to make sure we don't leave the grid
-        self._agent_location = np.clip(
+        new_loc = np.clip(
             self._agent_location + direction, 0, self.size - 1
         )
+
+        # ----- STOP PROPERTY -----
+        # before updating the movement, check if we are moving into something with STOP
+        # combine all the "stop" arrays to do a general check
+        all_stops = np.array([loc for object_type in self._stops.keys() for loc in self._stops[object_type]])
+        if not any(np.equal(all_stops, new_loc).all(1)):
+            self._agent_location = new_loc
+
         # An episode is done iff the agent has reached the target
         terminated = np.array_equal(self._agent_location, self._target_location)
         reward = 1 if terminated else 0  # Binary sparse rewards
@@ -121,42 +154,55 @@ class GridWorldEnv(gym.Env):
             self.clock = pygame.time.Clock()
 
         canvas = pygame.Surface((self.window_size, self.window_size))
-        canvas.fill((255, 255, 255))
-        pix_square_size = (
-            self.window_size / self.size
-        )  # The size of a single grid square in pixels
+        canvas.fill((0, 0, 0))
 
         # First we draw the target
         pygame.draw.rect(
             canvas,
             (255, 0, 0),
             pygame.Rect(
-                pix_square_size * self._target_location,
-                (pix_square_size, pix_square_size),
+                self.pix_square_size * self._target_location,
+                (self.pix_square_size, self.pix_square_size),
             ),
         )
-        # Now we draw the agent
-        pygame.draw.circle(
-            canvas,
-            (0, 0, 255),
-            (self._agent_location + 0.5) * pix_square_size,
-            pix_square_size / 3,
+
+        # draw the agent
+        canvas.blit(self.babaImg, pygame.Rect(
+                (self._agent_location) * self.pix_square_size, 
+                (self.pix_square_size, self.pix_square_size)
+            )
         )
+
+        # draw the stops
+        for x in range(self.size):
+            for y in range(self.size):
+                if any(np.equal(self._stops["wall"], np.array([x,y])).all(1)):
+                    canvas.blit(self.wallImg, pygame.Rect(
+                        (np.array([x, y])) * self.pix_square_size, 
+                        (self.pix_square_size, self.pix_square_size)
+                        )
+                    )
+                elif any(np.equal(self._stops["rock"], np.array([x,y])).all(1)):
+                    canvas.blit(self.rockImg, pygame.Rect(
+                        (np.array([x, y])) * self.pix_square_size, 
+                        (self.pix_square_size, self.pix_square_size)
+                        )
+                    )    
 
         # Finally, add some gridlines
         for x in range(self.size + 1):
             pygame.draw.line(
                 canvas,
-                0,
-                (0, pix_square_size * x),
-                (self.window_size, pix_square_size * x),
+                (255, 255, 255),
+                (0, self.pix_square_size * x),
+                (self.window_size, self.pix_square_size * x),
                 width=3,
             )
             pygame.draw.line(
                 canvas,
-                0,
-                (pix_square_size * x, 0),
-                (pix_square_size * x, self.window_size),
+                (255, 255, 255),
+                (self.pix_square_size * x, 0),
+                (self.pix_square_size * x, self.window_size),
                 width=3,
             )
 
@@ -182,9 +228,12 @@ class GridWorldEnv(gym.Env):
 
 
 if __name__ == "__main__":
-    env = GridWorldEnv(render_mode="human")
+    # env = GridWorldEnv(render_mode="human", size=13)
+    env = GridWorldEnv(render_mode="human", size=5)
     env.reset()
-    for _ in range(10):
-        env.step(env.action_space.sample())
+    terminated = False
+    while not terminated:
+        result = env.step(env.action_space.sample())
+        terminated = result[2]
         env.render()
     env.close()
