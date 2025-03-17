@@ -3,7 +3,7 @@ import gymnasium as gym
 from gymnasium import spaces
 import pygame
 import numpy as np
-
+from levels import level_1
 
 class Actions(Enum):
     right = 0
@@ -11,23 +11,81 @@ class Actions(Enum):
     left = 2
     down = 3
 
+class Object(Enum):
+    BACKGROUND = 0
+    BABA = 1
+    FLAG = 2
+    WALL = 3
+    ROCK = 4
+    PUSH_TEXT = 5
+    STOP_TEXT = 6
+    YOU_TEXT = 7
+    WIN_TEXT = 8
+    IS_TEXT = 9
+    BABA_TEXT = 10
+    ROCK_TEXT = 11
+    FLAG_TEXT = 12
+    WALL_TEXT = 13
+
+class ObjectState: 
+    def __init__(self, type, is_text=False, user_rules=[], immutable_rules=[]):
+        self.type = type
+        self.is_text = is_text
+        self.user_rules = user_rules
+        self.immutable_rules = immutable_rules
+
+    def rules(self):
+        return self.user_rules + self.immutable_rules
+ 
+    def remove_rule(self, rule): # only removes one instance of the rule
+        self.user_rules.remove(rule)
+    
+    def add_rule(self, new_rule):
+        self.user_rules.add(new_rule)
+
+    def is_text(self):
+        return self.is_text
+
+    def is_you(self):
+        return "you" in self.rules()
+    
+    def is_win(self):
+        return "win" in self.rules()
+    
+    def is_stop(self):
+        return "stop" in self.rules()
+    
+    def is_push(self):
+        return "push" in self.rules()
+    
+    def is_free(self):
+        return not self.rules()
 
 class GridWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
-
-    def __init__(self, render_mode=None, size=5):
-        self.size = size  # The size of the square grid
+  
+    def __init__(self, render_mode=None, grid_height=18, grid_width=33):
+        self.grid_height = grid_height
+        self.grid_width = grid_width
         self.window_size = 512  # The size of the PyGame window
 
-        # Observations are dictionaries with the agent's and the target's location.
-        # Each location is encoded as an element of {0, ..., `size`}^2,
-        # i.e. MultiDiscrete([size, size]).
-        self.observation_space = spaces.Dict(
-            {
-                "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-            }
-        )
+        self.objects = {
+            Object.BACKGROUND: ObjectState(Object.BACKGROUND),
+            Object.BABA: ObjectState(Object.BABA),
+            Object.FLAG: ObjectState(Object.FLAG),
+            Object.WALL: ObjectState(Object.WALL),
+            Object.ROCK: ObjectState(Object.ROCK),
+            Object.PUSH_TEXT: ObjectState(Object.PUSH_TEXT, [], immutable_rules=["push"]),
+            Object.STOP_TEXT: ObjectState(Object.STOP_TEXT, immutable_rules=["push"]),
+            Object.YOU_TEXT: ObjectState(Object.YOU_TEXT, immutable_rules=["push"]),
+            Object.IS_TEXT: ObjectState(Object.IS_TEXT, immutable_rules=["push"]),
+            Object.BABA_TEXT: ObjectState(Object.BABA_TEXT, immutable_rules=["push"]),
+            Object.FLAG_TEXT: ObjectState(Object.FLAG_TEXT, immutable_rules=["push"]),
+            Object.ROCK_TEXT: ObjectState(Object.ROCK_TEXT, immutable_rules=["push"]),
+            Object.WALL_TEXT: ObjectState(Object.WALL_TEXT, immutable_rules=["push"]),
+        }
+
+        self.observation_space = spaces.Box(low=0, high=len(self.objects) - 1, shape=(grid_width, grid_height), dtype=np.uint8)
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         self.action_space = spaces.Discrete(4)
@@ -57,6 +115,20 @@ class GridWorldEnv(gym.Env):
         self.window = None
         self.clock = None
 
+        self.reset()
+
+    def get_object(self, x, y):
+        return self.objects[self.state[x, y]]
+    
+    def set_object(self, x, y, object=Object.BACKGROUND):
+        self.objects[self.state[x, y]] = object
+    
+    def get_you_objects(self):
+        return [(obj_type, obj) for obj_type, obj in self.objects.items() if obj.is_you()]
+
+    def get_win_objects(self):
+        return [(obj_type, obj) for obj_type, obj in self.objects.items() if obj.is_win()]
+
     def _get_obs(self):
         return {"agent": self._agent_location, "target": self._target_location}
 
@@ -71,36 +143,94 @@ class GridWorldEnv(gym.Env):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
 
-        # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int)
-
-        # We will sample the target's location randomly until it does not
-        # coincide with the agent's location
-        self._target_location = self._agent_location
-        while np.array_equal(self._target_location, self._agent_location):
-            self._target_location = self.np_random.integers(
-                0, self.size, size=2, dtype=int
-            )
-
-        observation = self._get_obs()
-        info = self._get_info()
+        # TODO handle levels properly
+        state, rules = level_1()
+        self.state = state
+        for rule in rules:
+            self.objects[rule[0]].add_rule(rule[1])
 
         if self.render_mode == "human":
             self._render_frame()
 
+        observation = self.state
+        info = self._get_info()
         return observation, info
 
+    def check_win_condition(self):
+        """Checks if any object with 'YOU' property has moved into a space occupied by an object with 'WIN' property."""        
+        you_positions = [pos for pos in self.state if self.objects[pos].is_you()]
+        win_positions = [pos for pos in self.state if self.objects[pos].is_win()]
+        
+        return any(pos in win_positions for pos in you_positions)
+
+    def is_valid_move(self, moving_object, current_position, direction):
+        """Returns True if moving_object can move in the given direction."""
+        if moving_object.is_stop() and not moving_object.is_push():
+            return False
+        
+        next_position = current_position + direction
+
+        # Check if the next position is within grid bounds
+        if np.any(next_position < 0) or np.any(next_position >= self.observation_space.shape[:2]):
+            return False  # Out of bounds
+
+        # Get the object at the next position
+        next_object = self.get_object(next_position[0], next_position[1])
+
+        # If the next position is empty, or there is an object with no rules (treated as background), then it's a valid move
+        if next_object.is_free():
+            return True
+
+        # If the next position object is "PUSH", recursively check if it can move
+        if next_object.is_push():
+            return self.is_valid_move(next_object, next_position, direction)
+
+        return False  # Default case: Invalid move
+
+    def handle_move(self, moving_object, current_position, direction, moved_text=[]):
+        """Moves object and handles push mechanics."""
+
+        if not self.is_valid_move(moving_object, current_position, direction):
+            return  # Invalid move, do nothing
+
+        next_position = current_position + direction
+        next_object = self.state[next_position[0], next_position[1]]
+
+        # If the next object is pushable, move it recursively
+        if next_object.is_push():
+            moved_text = self.handle_move(next_object, next_position, direction, moved_text)
+
+        # update the state with the object's new position
+        self.state[next_position[0], next_position[1]] = self.state[current_position[0], current_position[1]]
+        self.state[current_position[0], current_position[1]] = self.object_dict["background"]  # Clear old position
+
+        if next_object.is_text():
+            moved_text.add((next_object, next_position))
+            
+        return moved_text
+
+    def update_rules(self, moved_text):
+        # TODO!! UPDATE RULES HERE!! moved_text tracks all text objects that have moved as (ObjectState, (newposition))
+        return # Placeholder
+
     def step(self, action):
-        # Map the action (element of {0,1,2,3}) to the direction we walk in
+        # Map the action (element of {0,1,2,3}) to the delta in coordinates
         direction = self._action_to_direction[action]
-        # We use `np.clip` to make sure we don't leave the grid
-        self._agent_location = np.clip(
-            self._agent_location + direction, 0, self.size - 1
-        )
-        # An episode is done iff the agent has reached the target
-        terminated = np.array_equal(self._agent_location, self._target_location)
-        reward = 1 if terminated else 0  # Binary sparse rewards
-        observation = self._get_obs()
+    
+        # move all objects that are "you":
+        for (type_id, you_object) in self.get_you_objects():
+            # Find all instances of this object type
+            object_positions = np.argwhere(self.state == type_id)
+
+            for current_position in object_positions:
+                moved_text = self.handle_move(you_object, current_position, direction)
+                self.update_rules(moved_text)
+                # TODO - what if multiple 'you' objects collide? do we want to handle this
+
+        # An episode is done if any 'you' is on top of any 'win' object
+        terminated = self.check_win_condition()
+        reward = 1 if terminated else 0  # TODO figure out ideal rewards (if move creates a useful rule that should be rewarded)
+        observation = self.state
         info = self._get_info()
 
         if self.render_mode == "human":
