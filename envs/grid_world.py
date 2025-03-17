@@ -27,18 +27,22 @@ class GridWorldEnv(gym.Env):
         self.babaImg = pygame.image.load('imgs/baba.png')
         self.wallImg = pygame.image.load('imgs/wall.png')
         self.rockImg = pygame.image.load('imgs/rock.png')
+        self.tileImg = pygame.image.load('imgs/tile.png')
 
         self.babaImg = pygame.transform.scale(self.babaImg, (self.pix_square_size, self.pix_square_size))
         self.wallImg = pygame.transform.scale(self.wallImg, (self.pix_square_size, self.pix_square_size))
         self.rockImg = pygame.transform.scale(self.rockImg, (self.pix_square_size, self.pix_square_size))
+        self.tileImg = pygame.transform.scale(self.tileImg, (self.pix_square_size, self.pix_square_size))
 
-        # Observations are dictionaries with the agent's and the target's location.
+        # Observations are dictionaries
         # Each location is encoded as an element of {0, ..., `size`}^2,
         # i.e. MultiDiscrete([size, size]).
         self.observation_space = spaces.Dict(
             {
-                "agent": spaces.Box(0, size - 1, shape=(2,), dtype=int),
-                "target": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "you": spaces.Dict({
+                        "baba": spaces.Sequence(spaces.Box(0, size - 1, shape=(2,), dtype=int))
+                    }   
+                ),
                 "stop": spaces.Dict(
                     {
                         "wall": spaces.Sequence(spaces.Box(0, size - 1, shape=(2,), dtype=int)),
@@ -77,29 +81,24 @@ class GridWorldEnv(gym.Env):
         self.clock = None
 
     def _get_obs(self):
-        return {"agent": self._agent_location, "target": self._target_location, "stop": self._stops}
+        return {"you": self._you, "stop": self._stops}
 
+    # TODO: UPDATE
     def _get_info(self):
         return {
-            "distance": np.linalg.norm(
-                self._agent_location - self._target_location, ord=1
-            )
+            # "distance": np.linalg.norm(
+            #     self._agent_location - self._target_location, ord=1
+            # )
         }
 
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
 
-        # Choose the agent's location uniformly at random
-        self._agent_location = self.np_random.integers(0, self.size, size=2, dtype=int)
-
-        # We will sample the target's location randomly until it does not
-        # coincide with the agent's location
-        self._target_location = self._agent_location
-        while np.array_equal(self._target_location, self._agent_location):
-            self._target_location = self.np_random.integers(
-                0, self.size, size=2, dtype=int
-            )
+        # Choose baba's location
+        self._you = {
+            "baba": np.array([np.array([0, 2])])
+        }
 
         # choose locations according to the first level
         self._stops = {
@@ -118,20 +117,26 @@ class GridWorldEnv(gym.Env):
     def step(self, action):
         # Map the action (element of {0,1,2,3}) to the direction we walk in
         direction = self._action_to_direction[action]
-        # We use `np.clip` to make sure we don't leave the grid
-        new_loc = np.clip(
-            self._agent_location + direction, 0, self.size - 1
-        )
 
-        # ----- STOP PROPERTY -----
-        # before updating the movement, check if we are moving into something with STOP
-        # combine all the "stop" arrays to do a general check
-        all_stops = np.array([loc for object_type in self._stops.keys() for loc in self._stops[object_type]])
-        if not any(np.equal(all_stops, new_loc).all(1)):
-            self._agent_location = new_loc
+        for object_type in self._you:
+            for i in range(len(self._you[object_type])):
+                # We use `np.clip` to make sure we don't leave the grid
+                new_loc = np.clip(
+                    self._you[object_type][i] + direction, 0, self.size - 1
+                )
+
+                # ----- STOP PROPERTY -----
+                # before updating the movement, check if we are moving into something with STOP
+                # combine all the "stop" arrays to do a general check
+                all_stops = np.array([loc for object_type in self._stops.keys() for loc in self._stops[object_type]])
+                if not any(np.equal(all_stops, new_loc).all(1)):
+                    self._you[object_type][i] = new_loc
 
         # An episode is done iff the agent has reached the target
-        terminated = np.array_equal(self._agent_location, self._target_location)
+
+        # TODO: UPDATE TO CHECK WIN PROPERTY
+        # terminated = np.array_equal(self._agent_location, self._target_location)
+
         reward = 1 if terminated else 0  # Binary sparse rewards
         observation = self._get_obs()
         info = self._get_info()
@@ -156,23 +161,6 @@ class GridWorldEnv(gym.Env):
         canvas = pygame.Surface((self.window_size, self.window_size))
         canvas.fill((0, 0, 0))
 
-        # First we draw the target
-        pygame.draw.rect(
-            canvas,
-            (255, 0, 0),
-            pygame.Rect(
-                self.pix_square_size * self._target_location,
-                (self.pix_square_size, self.pix_square_size),
-            ),
-        )
-
-        # draw the agent
-        canvas.blit(self.babaImg, pygame.Rect(
-                (self._agent_location) * self.pix_square_size, 
-                (self.pix_square_size, self.pix_square_size)
-            )
-        )
-
         # draw the stops
         for x in range(self.size):
             for y in range(self.size):
@@ -187,24 +175,21 @@ class GridWorldEnv(gym.Env):
                         (np.array([x, y])) * self.pix_square_size, 
                         (self.pix_square_size, self.pix_square_size)
                         )
-                    )    
-
-        # Finally, add some gridlines
-        for x in range(self.size + 1):
-            pygame.draw.line(
-                canvas,
-                (255, 255, 255),
-                (0, self.pix_square_size * x),
-                (self.window_size, self.pix_square_size * x),
-                width=3,
-            )
-            pygame.draw.line(
-                canvas,
-                (255, 255, 255),
-                (self.pix_square_size * x, 0),
-                (self.pix_square_size * x, self.window_size),
-                width=3,
-            )
+                    )  
+                elif any(np.equal(self._you["baba"], np.array([x,y])).all(1)):
+                        canvas.blit(self.babaImg, pygame.Rect(
+                            (np.array([x, y])) * self.pix_square_size, 
+                            (self.pix_square_size, self.pix_square_size)
+                            )
+                        )
+                else:
+                    # anything that isn't one of these objects (and is not where baba is), draw as a tile  
+                    if not any(np.equal(self._you["baba"], np.array([x,y])).all(1)):
+                            canvas.blit(self.tileImg, pygame.Rect(
+                                (np.array([x, y])) * self.pix_square_size, 
+                                (self.pix_square_size, self.pix_square_size)
+                                )
+                            )
 
         if self.render_mode == "human":
             # The following line copies our drawings from `canvas` to the visible window
