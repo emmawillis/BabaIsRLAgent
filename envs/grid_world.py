@@ -1,4 +1,3 @@
-from enum import Enum
 from baba_levels import level_1
 import gymnasium as gym
 from gymnasium import spaces
@@ -57,7 +56,7 @@ class GridWorldEnv(gym.Env):
         # Observations are dictionaries
         # Each location is encoded as an element of {0, ..., `size`}^2,
         # i.e. MultiDiscrete([size, size]).
-        self.observation_space = spaces.Box(low=0, high=len(self.objects) - 1, shape=(width, height), dtype=np.uint8)
+        self.observation_space = spaces.Box(low=0, high=len(self.objects) - 1, shape=(width, height), dtype=np.uint8) # TODO: maybe change this?
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         self.action_space = spaces.Discrete(4)
@@ -75,45 +74,68 @@ class GridWorldEnv(gym.Env):
         }
 
     def load_images(self):
-        self.babaImg = pygame.image.load('imgs/baba.png')
-        self.wallImg = pygame.image.load('imgs/wall.png')
-        self.rockImg = pygame.image.load('imgs/rock.png')
-        self.tileImg = pygame.image.load('imgs/tile.png')
-        self.flagImg = pygame.image.load('imgs/FLAG.png')
+        babaImg = pygame.image.load('imgs/baba.png')
+        wallImg = pygame.image.load('imgs/wall.png')
+        rockImg = pygame.image.load('imgs/rock.png')
+        tileImg = pygame.image.load('imgs/tile.png')
+        flagImg = pygame.image.load('imgs/FLAG.png')
+        
+        babaImg = pygame.transform.scale(babaImg, (self.pix_square_size, self.pix_square_size))
+        wallImg = pygame.transform.scale(wallImg, (self.pix_square_size, self.pix_square_size))
+        rockImg = pygame.transform.scale(rockImg, (self.pix_square_size, self.pix_square_size))
+        tileImg = pygame.transform.scale(tileImg, (self.pix_square_size, self.pix_square_size))
+        flagImg = pygame.transform.scale(flagImg, (self.pix_square_size, self.pix_square_size))
+        
+        babaTextImg = pygame.image.load('imgs/BABA_text.png')
+        wallTextImg = pygame.image.load('imgs/WALL_text.png')
+        rockTextImg = pygame.image.load('imgs/ROCK_text.png')
+        flagTextImg = pygame.image.load('imgs/FLAG_text.png')
+        
+        babaTextImg = pygame.transform.scale(babaTextImg, (self.pix_square_size, self.pix_square_size))
+        wallTextImg = pygame.transform.scale(wallTextImg, (self.pix_square_size, self.pix_square_size))
+        rockTextImg = pygame.transform.scale(rockTextImg, (self.pix_square_size, self.pix_square_size))
+        flagTextImg = pygame.transform.scale(flagTextImg, (self.pix_square_size, self.pix_square_size))
+        
+        isTextImg = pygame.image.load('imgs/IS_text.png')
+        youTextImg = pygame.image.load('imgs/YOU_text.png')
+        pushTextImg = pygame.image.load('imgs/PUSH_text.png')
+        stopTextImg = pygame.image.load('imgs/STOP_text.png')
+        winTextImg = pygame.image.load('imgs/WIN_text.png')
+        
+        isTextImg = pygame.transform.scale(isTextImg, (self.pix_square_size, self.pix_square_size))
+        youTextImg = pygame.transform.scale(youTextImg, (self.pix_square_size, self.pix_square_size))
+        pushTextImg = pygame.transform.scale(pushTextImg, (self.pix_square_size, self.pix_square_size))
+        stopTextImg = pygame.transform.scale(stopTextImg, (self.pix_square_size, self.pix_square_size))
+        winTextImg = pygame.transform.scale(winTextImg, (self.pix_square_size, self.pix_square_size))
+        
+        self.obj_imgs = {
+            Object.BACKGROUND.value: tileImg,
+            Object.BABA.value: babaImg,
+            Object.WALL.value: wallImg,
+            Object.ROCK.value: rockImg,
+            Object.FLAG.value: flagImg,
+            Object.BABA_TEXT.value: babaTextImg,
+            Object.WALL_TEXT.value: wallTextImg,
+            Object.ROCK_TEXT.value: rockTextImg,
+            Object.FLAG_TEXT.value: flagTextImg,
+            Object.IS_TEXT.value: isTextImg,
+            Object.YOU_TEXT.value: youTextImg,
+            Object.PUSH_TEXT.value: pushTextImg,
+            Object.STOP_TEXT.value: stopTextImg,
+            Object.WIN_TEXT.value: winTextImg,
+        }
 
-        self.babaImg = pygame.transform.scale(self.babaImg, (self.pix_square_size, self.pix_square_size))
-        self.wallImg = pygame.transform.scale(self.wallImg, (self.pix_square_size, self.pix_square_size))
-        self.rockImg = pygame.transform.scale(self.rockImg, (self.pix_square_size, self.pix_square_size))
-        self.tileImg = pygame.transform.scale(self.tileImg, (self.pix_square_size, self.pix_square_size))
-        self.flagImg = pygame.transform.scale(self.flagImg, (self.pix_square_size, self.pix_square_size))
-
-        self.babaTextImg = pygame.image.load('imgs/BABA_text.png')
-        self.wallTextImg = pygame.image.load('imgs/WALL_text.png')
-        self.rockTextImg = pygame.image.load('imgs/ROCK_text.png')
-        self.flagTextImg = pygame.image.load('imgs/FLAG_text.png')
-
-        self.babaTextImg = pygame.transform.scale(self.babaTextImg, (self.pix_square_size, self.pix_square_size))
-        self.wallTextImg = pygame.transform.scale(self.wallTextImg, (self.pix_square_size, self.pix_square_size))
-        self.rockTextImg = pygame.transform.scale(self.rockTextImg, (self.pix_square_size, self.pix_square_size))
-        self.flagTextImg = pygame.transform.scale(self.flagTextImg, (self.pix_square_size, self.pix_square_size))
-
-        self.isTextImg = pygame.image.load('imgs/IS_text.png')
-        self.youTextImg = pygame.image.load('imgs/YOU_text.png')
-        self.pushTextImg = pygame.image.load('imgs/PUSH_text.png')
-        self.stopTextImg = pygame.image.load('imgs/STOP_text.png')
-        self.winTextImg = pygame.image.load('imgs/WIN_text.png')
-
-        self.isTextImg = pygame.transform.scale(self.isTextImg, (self.pix_square_size, self.pix_square_size))
-        self.youTextImg = pygame.transform.scale(self.youTextImg, (self.pix_square_size, self.pix_square_size))
-        self.pushTextImg = pygame.transform.scale(self.pushTextImg, (self.pix_square_size, self.pix_square_size))
-        self.stopTextImg = pygame.transform.scale(self.stopTextImg, (self.pix_square_size, self.pix_square_size))
-        self.winTextImg = pygame.transform.scale(self.winTextImg, (self.pix_square_size, self.pix_square_size))
-
-    def get_object(self, x, y):
-        return self.objects[self.state[x, y]]
+    def get_objects(self, x, y):
+        # dictionary of object:[object_identifier] for all objects at location x,y
+        objects = {self.objects[k]:[i for (x_, y_, i) in self.state[k] if x_ == x and y_ == y] 
+                   for k in self.state.keys() if (x,y) in self.get_object_type_locations(k)}
+        return objects
     
-    def set_object(self, x, y, object=Object.BACKGROUND):
-        self.objects[self.state[x, y]] = object
+    def set_object_location(self, new_x, new_y, object_identifier, object_type):
+        # remove object from old location
+        self.state[object_type] = [(x, y, i) for (x, y, i) in self.state[object_type] if i != object_identifier]
+        # add object to new location
+        self.state[object_type].append((new_x, new_y, object_identifier))
     
     def get_you_objects(self):
         return [(obj_type, obj) for obj_type, obj in self.objects.items() if obj.is_you()]
@@ -121,6 +143,9 @@ class GridWorldEnv(gym.Env):
     def get_win_objects(self):
         return [(obj_type, obj) for obj_type, obj in self.objects.items() if obj.is_win()]
 
+    def get_object_type_locations(self, object_type):
+        return [(x,y) for (x,y,_) in self.state[object_type]]
+    
     def _get_info(self):
         return {
             # "distance": np.linalg.norm(
@@ -131,10 +156,17 @@ class GridWorldEnv(gym.Env):
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
-
+        self.state = {k:[] for k in self.objects.keys()}
+        object_identifier = 0
         # TODO handle levels properly
         state, rules = level_1()
-        self.state = state
+        # self.state = state
+        for x in range(self.width):
+            for y in range(self.height):
+                obj = state[x, y]
+                if obj != Object.BACKGROUND.value:
+                    self.state[obj].append((x, y, object_identifier))
+                    object_identifier += 1
         for (type, rule) in rules:
             self.objects[type.value].add_rule(rule)
 
@@ -146,105 +178,150 @@ class GridWorldEnv(gym.Env):
         return observation, info
 
     def check_win_condition(self):
+        # checking if an object has both 'YOU' and 'WIN' properties
         if any(obj.is_win() for (_, obj) in self.get_you_objects()):
             return True
-
-        """Checks if any object with 'YOU' property has moved into a space occupied by an object with 'WIN' property."""        
-        # you_positions = [pos for pos in self.state if self.get_object(pos[0], pos[1]).is_you()]
-        # win_positions = [pos for pos in self.state if self.get_object(pos[0], pos[1]).is_win()]
-        
-        # return [pos in win_positions for pos in you_positions].any()
-        return False # TODO!!!! objects cant currently overlap
-
-    def is_valid_move(self, moving_object, current_position, direction):
-        """Returns True if moving_object can move in the given direction."""
-        if moving_object.is_stop() and not moving_object.is_push():
-            return False
-        
-        next_position = current_position + direction
-
-        # Check if the next position is within grid bounds
-        if np.any(next_position < 0) or np.any(next_position >= self.observation_space.shape[:2]):
-            return False  # Out of bounds
-
-        # Get the object at the next position
-        next_object = self.get_object(next_position[0], next_position[1])
-
-        # If the next position is empty, or there is an object with no rules (treated as background), then it's a valid move
-        if next_object.is_free() or next_object.is_win():
+        # checking if any object with 'YOU' property has moved onto an object with 'WIN' property
+        you_loc = set()
+        win_loc = set()
+        for (obj_type, _) in self.get_you_objects():
+            you_loc.update(set(self.get_object_type_locations(obj_type)))
+        for (obj_type, _) in self.get_win_objects():
+            win_loc.update(set(self.get_object_type_locations(obj_type)))
+        if you_loc.intersection(win_loc):
             return True
-
-        # If the next position object is "PUSH", recursively check if it can move
-        if next_object.is_push():
-            return self.is_valid_move(next_object, next_position, direction)
-
-        return False  # Default case: Invalid move
-
-    def handle_move(self, moving_object, current_position, direction):
-        """Moves object and handles push mechanics."""
-
-        if not self.is_valid_move(moving_object, current_position, direction):
-            return  # Invalid move, do nothing
-
-        next_position = current_position + direction
-        next_object = self.get_object(next_position[0], next_position[1])
-
-        # If the next object is pushable, move it recursively
-        if next_object.is_push():
-            self.handle_move(next_object, next_position, direction)
-
-        # update the state with the object's new position
-        self.state[next_position[0], next_position[1]] = self.state[current_position[0], current_position[1]]
-        self.state[current_position[0], current_position[1]] = Object.BACKGROUND.value  # Clear old position
-
+        return False 
+    
+    # backtracking a move that is not valid
+    def backtrack(self, current_location, direction, flagged_objects, backtracked_objects=None):
+        recurse = False
+        # for the first call
+        if backtracked_objects is None:
+            backtracked_objects = set()
+        # getting the objects in the current location and the previous location based on the direction
+        current_objects = self.get_objects(current_location[0], current_location[1])
+        previous_location = current_location - direction
+        for obj, obj_ids in current_objects.items():
+            # only move back objects that are push or you
+            if obj.is_push() or obj.is_you():
+                # make sure the object actually moved into this square and that it has not already been backtracked
+                for obj_id in [obj_id for obj_id in obj_ids if obj_id in flagged_objects and obj_id not in backtracked_objects]:
+                    self.set_object_location(previous_location[0], previous_location[1], obj_id, obj.type.value)
+                    backtracked_objects.add(obj_id)
+                    recurse = True # need to backtrack any items in the previous location if something was there
+        if recurse:
+            self.backtrack(previous_location, direction, flagged_objects, backtracked_objects)
         return
 
-    def get_coordinates_of_type(self, object_type):
-        return [
-            (x, y)
-            for x in range(self.width)
-            for y in range(self.height)
-            if self.get_object(x, y).type == object_type
-        ]
+    def is_valid_move(self, current_location, direction, flagged_objects):
+        """Returns True if an object can move in the given direction."""
+        next_location = current_location + direction
+        check_next = False
+        
+        # Check if the next position is within grid bounds
+        if np.any(next_location < 0) or np.any(next_location >= self.observation_space.shape[:2]):
+            self.backtrack(current_location, direction, flagged_objects)
+            return 0  # Out of bounds
+        
+        next_objects = self.get_objects(next_location[0], next_location[1])
+        
+        for obj, obj_ids in next_objects.items():
+            # if there is an object that is a stop object, the move is invalid
+            if obj.is_stop() and not obj.is_push():
+                self.backtrack(current_location, direction, flagged_objects)
+                return 0
+            # if there is a push object that is flagged (has already been moved, hence was backtracked), the move is invalid
+            elif obj.is_push() and set(obj_ids).intersection(flagged_objects): # if obj is push and is flagged (moved already)
+                self.backtrack(current_location, direction, flagged_objects)
+                return 0
+            elif obj.is_push(): # if there is a push object that has not been flagged, we have to check teh next square
+                check_next = True
+        if check_next:
+            return 1
+        else:
+            return -1
+
+    def handle_move(self, update_locations, direction):
+        """Moves object and handles push mechanics."""
+        flagged_objects = set()
+        next_locations = []
+        # first movement, check starting location and move all objects with atrribute 'you' if move is valid
+        for current_location in update_locations:
+            current_objects = self.get_objects(current_location[0], current_location[1])
+            check_next = self.is_valid_move(current_location, direction, flagged_objects)
+            if check_next:
+                next_location = current_location + direction
+                for obj, obj_ids in current_objects.items():
+                    non_flagged = [obj_id for obj_id in obj_ids if obj_id not in flagged_objects]
+                    if obj.is_you():
+                        for obj_id in non_flagged:
+                            self.set_object_location(next_location[0], next_location[1], obj_id, obj.type.value)
+                        flagged_objects.update(obj_ids)
+                        if check_next == 1:
+                            next_locations.append(next_location)
+            else: # if it is not a valid move, flag the objects here so that they are not moved/act as non-valid square
+                for obj, obj_ids in current_objects.items():
+                    if obj.is_you() or obj.is_push():
+                        flagged_objects.update(obj_ids)
+        # go through each location and move all push objects at that location if the next location is a valid move
+        # non-valid moves will recursively backtrack movements
+        update_locations = next_locations
+        while update_locations:
+            current_location = update_locations.pop()
+            current_objects = self.get_objects(current_location[0], current_location[1])
+            check_next = self.is_valid_move(current_location, direction, flagged_objects)
+            if check_next:
+                for obj, obj_ids in current_objects.items():
+                    # go through only the non-flagged push objects (flagged ones have been moved into the current location)
+                    non_flagged = [obj_id for obj_id in obj_ids if obj_id not in flagged_objects]
+                    if obj.is_push() and non_flagged:
+                            next_location = current_location + direction
+                            for obj_id in non_flagged:
+                                self.set_object_location(next_location[0], next_location[1], obj_id, obj.type.value)
+                            flagged_objects.update(non_flagged)
+                            if check_next == 1:
+                                update_locations.append(next_location)
+            else: # if it is not a valid move, flag the objects here so that they are not moved/act as non-valid square
+                for obj, obj_ids in current_objects.items():
+                    if obj.is_push():
+                        flagged_objects.update(obj_ids)
+        return
 
     def update_rules(self):
         # clear rules on all objects
         for obj in self.objects.values():
             obj.clear_rules()
-        
-        for x,y in self.get_coordinates_of_type(Object.IS_TEXT): # this is looping over all IS_TEXT objects
-            paired_object_key = self.get_object(x-1, y).paired_object_key
-            if paired_object_key is not None:
-                rule = self.get_object(x+1, y).rule_text
-                if rule is not None:
-                    self.objects[paired_object_key].add_rule(rule)
-            
-            paired_object_key = self.get_object(x, y-1).paired_object_key
-            if paired_object_key is not None:
-                rule = self.get_object(x, y+1).rule_text
-                if rule is not None:
-                    self.objects[paired_object_key].add_rule(rule)
-
+        # go through all the is text locations and look for horizontal and vertical sentences
+        for (x,y,_) in self.state[Object.IS_TEXT.value]:
+            for obj_n in self.get_objects(x-1, y).keys():
+                if obj_n.paired_object_key:
+                    for obj_v in self.get_objects(x+1, y).keys():
+                        if obj_v.rule_text:
+                            self.objects[obj_n.paired_object_key].add_rule(obj_v.rule_text)
+            for obj_n in self.get_objects(x, y+1).keys():
+                if obj_n.paired_object_key:
+                    for obj_v in self.get_objects(x, y-1).keys():
+                        if obj_v.rule_text:
+                            self.objects[obj_n.paired_object_key].add_rule(obj_v.rule_text)
         return
 
     def step(self, action):
         # Map the action (element of {0,1,2,3}) to the delta in coordinates
         direction = self._action_to_direction[action]
-
+        starting_locations = set()
         # move all objects that are "you":
         for (type_id, you_object) in self.get_you_objects():
             # Find all instances of this object type
-            object_positions = np.argwhere(self.state == type_id)
+            starting_locations.update(set(self.get_object_type_locations(type_id)))
 
-            for current_position in object_positions:
-                self.handle_move(you_object, current_position, direction)
-                self.update_rules()
-                # TODO - what if multiple 'you' objects collide? do we want to handle this
+        self.handle_move(starting_locations, direction)
+        
+        self.update_rules()
 
         # An episode is done if any 'you' is on top of any 'win' object
         terminated = self.check_win_condition()
         reward = 1 if terminated else 0  # TODO figure out ideal rewards (if move creates a useful rule that should be rewarded)
-        observation = self.state
+        observation = self.state # TODO maybe need to change this to only include locaitons, not the ids
         info = self._get_info()
 
         if self.render_mode == "human":
@@ -267,93 +344,18 @@ class GridWorldEnv(gym.Env):
         # draw the stops
         for x in range(self.width):
             for y in range(self.height):
-                if self.get_object(x,y).type == Object.WALL:
-                    canvas.blit(self.wallImg, pygame.Rect(
-                        (np.array([x, y])) * self.pix_square_size, 
-                        (self.pix_square_size, self.pix_square_size)
-                        )
-                    )
-                elif self.get_object(x,y).type == Object.ROCK:
-                    canvas.blit(self.rockImg, pygame.Rect(
-                        (np.array([x, y])) * self.pix_square_size, 
-                        (self.pix_square_size, self.pix_square_size)
-                        )
-                    )  
-                elif self.get_object(x,y).type == Object.FLAG:
-                    canvas.blit(self.flagImg, pygame.Rect(
-                        (np.array([x, y])) * self.pix_square_size, 
-                        (self.pix_square_size, self.pix_square_size)
-                        )
-                    )  
-                elif self.get_object(x,y).type == Object.BABA:
-                        canvas.blit(self.babaImg, pygame.Rect(
+                # draw tiles everywhere
+                canvas.blit(self.obj_imgs[Object.BACKGROUND.value], pygame.Rect(
                             (np.array([x, y])) * self.pix_square_size, 
                             (self.pix_square_size, self.pix_square_size)
                             )
                         )
-                elif self.get_object(x,y).type == Object.BABA_TEXT:
-                        canvas.blit(self.babaTextImg, pygame.Rect(
+                for obj, _ in self.get_objects(x, y).items():
+                    canvas.blit(self.obj_imgs[obj.type.value], pygame.Rect(
                             (np.array([x, y])) * self.pix_square_size, 
                             (self.pix_square_size, self.pix_square_size)
                             )
                         )
-                elif self.get_object(x,y).type == Object.FLAG_TEXT:
-                        canvas.blit(self.flagTextImg, pygame.Rect(
-                            (np.array([x, y])) * self.pix_square_size, 
-                            (self.pix_square_size, self.pix_square_size)
-                            )
-                        )
-                elif self.get_object(x,y).type == Object.IS_TEXT:
-                        canvas.blit(self.isTextImg, pygame.Rect(
-                            (np.array([x, y])) * self.pix_square_size, 
-                            (self.pix_square_size, self.pix_square_size)
-                            )
-                        )
-                elif self.get_object(x,y).type == Object.PUSH_TEXT:
-                        canvas.blit(self.pushTextImg, pygame.Rect(
-                            (np.array([x, y])) * self.pix_square_size, 
-                            (self.pix_square_size, self.pix_square_size)
-                            )
-                        )
-                elif self.get_object(x,y).type == Object.ROCK_TEXT:
-                        canvas.blit(self.rockTextImg, pygame.Rect(
-                            (np.array([x, y])) * self.pix_square_size, 
-                            (self.pix_square_size, self.pix_square_size)
-                            )
-                        )
-                elif self.get_object(x,y).type == Object.STOP_TEXT:
-                        canvas.blit(self.stopTextImg, pygame.Rect(
-                            (np.array([x, y])) * self.pix_square_size, 
-                            (self.pix_square_size, self.pix_square_size)
-                            )
-                        )
-                elif self.get_object(x,y).type == Object.WALL_TEXT:
-                        canvas.blit(self.wallTextImg, pygame.Rect(
-                            (np.array([x, y])) * self.pix_square_size, 
-                            (self.pix_square_size, self.pix_square_size)
-                            )
-                        )
-                elif self.get_object(x,y).type == Object.WIN_TEXT:
-                        canvas.blit(self.winTextImg, pygame.Rect(
-                            (np.array([x, y])) * self.pix_square_size, 
-                            (self.pix_square_size, self.pix_square_size)
-                            )
-                        )
-                elif self.get_object(x,y).type == Object.YOU_TEXT:
-                        canvas.blit(self.youTextImg, pygame.Rect(
-                            (np.array([x, y])) * self.pix_square_size, 
-                            (self.pix_square_size, self.pix_square_size)
-                            )
-                        )
-                
-                else:
-                    # anything that isn't one of these objects (and is not where baba is), draw as a tile  
-                    canvas.blit(self.tileImg, pygame.Rect(
-                                (np.array([x, y])) * self.pix_square_size, 
-                                (self.pix_square_size, self.pix_square_size)
-                                )
-                            )
-
         if self.render_mode == "human":
             # The following line copies our drawings from `canvas` to the visible window
             self.window.blit(canvas, canvas.get_rect())
