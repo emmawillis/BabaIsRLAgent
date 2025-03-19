@@ -158,8 +158,7 @@ class GridWorldEnv(gym.Env):
         super().reset(seed=seed)
         self.state = {k:[] for k in self.objects.keys()}
         object_identifier = 0
-        # TODO handle levels properly
-        state, rules = level_1()
+        state = level_1()
         # self.state = state
         for x in range(self.width):
             for y in range(self.height):
@@ -167,8 +166,7 @@ class GridWorldEnv(gym.Env):
                 if obj != Object.BACKGROUND.value:
                     self.state[obj].append((x, y, object_identifier))
                     object_identifier += 1
-        for (type, rule) in rules:
-            self.objects[type.value].add_rule(rule)
+        self.update_rules()
 
         if self.render_mode == "human":
             self._render_frame()
