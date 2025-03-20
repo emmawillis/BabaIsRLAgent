@@ -232,7 +232,7 @@ class GridWorldEnv(gym.Env):
             elif obj.is_push() and set(obj_ids).intersection(flagged_objects): # if obj is push and is flagged (moved already)
                 self.backtrack(current_location, direction, flagged_objects)
                 return 0
-            elif obj.is_push(): # if there is a push object that has not been flagged, we have to check teh next square
+            elif obj.is_push(): # if there is a push object that has not been flagged, we have to check the next square
                 check_next = True
         if check_next:
             return 1
@@ -296,9 +296,9 @@ class GridWorldEnv(gym.Env):
                     for obj_v in self.get_objects(x+1, y).keys():
                         if obj_v.rule_text:
                             self.objects[obj_n.paired_object_key].add_rule(obj_v.rule_text)
-            for obj_n in self.get_objects(x, y+1).keys():
+            for obj_n in self.get_objects(x, y-1).keys():
                 if obj_n.paired_object_key:
-                    for obj_v in self.get_objects(x, y-1).keys():
+                    for obj_v in self.get_objects(x, y+1).keys():
                         if obj_v.rule_text:
                             self.objects[obj_n.paired_object_key].add_rule(obj_v.rule_text)
         return
@@ -340,6 +340,21 @@ class GridWorldEnv(gym.Env):
         canvas.fill((0, 0, 0))
 
         # draw the stops
+        # for x in range(self.width):
+        #     for y in range(self.height):
+        #         # draw tiles everywhere
+        #         canvas.blit(self.obj_imgs[Object.BACKGROUND.value], pygame.Rect(
+        #                     (np.array([x, y])) * self.pix_square_size, 
+        #                     (self.pix_square_size, self.pix_square_size)
+        #                     )
+        #                 )
+        #         for obj, _ in self.get_objects(x, y).items():
+        #             canvas.blit(self.obj_imgs[obj.type.value], pygame.Rect(
+        #                     (np.array([x, y])) * self.pix_square_size, 
+        #                     (self.pix_square_size, self.pix_square_size)
+        #                     )
+        #                 )
+       # draw
         for x in range(self.width):
             for y in range(self.height):
                 # draw tiles everywhere
@@ -348,12 +363,30 @@ class GridWorldEnv(gym.Env):
                             (self.pix_square_size, self.pix_square_size)
                             )
                         )
-                for obj, _ in self.get_objects(x, y).items():
-                    canvas.blit(self.obj_imgs[obj.type.value], pygame.Rect(
+        you_objects = [obj_type for (obj_type, _) in self.get_you_objects()]
+        win_objects = [obj_type for (obj_type, _) in self.get_win_objects()]
+        for obj_type in self.objects.keys():
+            if obj_type not in you_objects and obj_type not in win_objects:
+                for (x, y, _) in self.state[obj_type]:
+                    canvas.blit(self.obj_imgs[obj_type], pygame.Rect(
                             (np.array([x, y])) * self.pix_square_size, 
                             (self.pix_square_size, self.pix_square_size)
                             )
                         )
+        for obj_type in win_objects:
+            for (x, y, _) in self.state[obj_type]:
+                canvas.blit(self.obj_imgs[obj_type], pygame.Rect(
+                        (np.array([x, y])) * self.pix_square_size, 
+                        (self.pix_square_size, self.pix_square_size)
+                        )
+                    )
+        for obj_type in you_objects:
+            for (x, y, _) in self.state[obj_type]:
+                canvas.blit(self.obj_imgs[obj_type], pygame.Rect(
+                        (np.array([x, y])) * self.pix_square_size, 
+                        (self.pix_square_size, self.pix_square_size)
+                        )
+                    )
         if self.render_mode == "human":
             # The following line copies our drawings from `canvas` to the visible window
             self.window.blit(canvas, canvas.get_rect())
