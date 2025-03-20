@@ -339,21 +339,6 @@ class GridWorldEnv(gym.Env):
         canvas = pygame.Surface((self.window_width, self.window_height))
         canvas.fill((0, 0, 0))
 
-        # draw the stops
-        # for x in range(self.width):
-        #     for y in range(self.height):
-        #         # draw tiles everywhere
-        #         canvas.blit(self.obj_imgs[Object.BACKGROUND.value], pygame.Rect(
-        #                     (np.array([x, y])) * self.pix_square_size, 
-        #                     (self.pix_square_size, self.pix_square_size)
-        #                     )
-        #                 )
-        #         for obj, _ in self.get_objects(x, y).items():
-        #             canvas.blit(self.obj_imgs[obj.type.value], pygame.Rect(
-        #                     (np.array([x, y])) * self.pix_square_size, 
-        #                     (self.pix_square_size, self.pix_square_size)
-        #                     )
-        #                 )
        # draw
         for x in range(self.width):
             for y in range(self.height):
