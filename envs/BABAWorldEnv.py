@@ -1,14 +1,14 @@
-from baba_levels import level_1
+from .baba_levels import level_1, hardcoded_level_1
 import gymnasium as gym
 from gymnasium.spaces import Dict, Sequence, Box, Discrete
 import pygame
 import numpy as np
-from game_objects import Actions, Object, ObjectState
+from .game_objects import Actions, Object, ObjectState
 
-class GridWorldEnv(gym.Env):
+class BABAWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, width=5, height=5):
+    def __init__(self, render_mode=None, width=17, height=15, level=hardcoded_level_1):
         self.width = width
         self.height = height
 
@@ -30,12 +30,14 @@ class GridWorldEnv(gym.Env):
             pygame.display.init()
             infoObject = pygame.display.Info()
             self.window_width, self.window_height = infoObject.current_w, infoObject.current_h
+            self.window_width, self.window_height = 17*50, 15*50
             self.pix_square_size = min(
                 self.window_width // width, self.window_height // height
             )
-            self.window = pygame.display.set_mode((self.window_width, self.window_height), pygame.FULLSCREEN)
-
-        self.load_images()
+            # self.window = pygame.display.set_mode((self.window_width, self.window_height), pygame.FULLSCREEN)
+            self.window = pygame.display.set_mode((self.window_width, self.window_height), pygame.RESIZABLE)
+        if self.render_mode == "human":
+            self.load_images()
         self.objects = {
             Object.BACKGROUND.value: ObjectState(Object.BACKGROUND),
             Object.BABA.value: ObjectState(Object.BABA),
@@ -57,21 +59,26 @@ class GridWorldEnv(gym.Env):
         # Each location is encoded as an element of {0, ..., `size`}^2,
         # i.e. MultiDiscrete([size, size]).
         
-        self.observation_space = Dict({
-            Object.BABA.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.FLAG.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.WALL.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.ROCK.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.PUSH_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.STOP_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.YOU_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.WIN_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.IS_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.BABA_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.FLAG_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.ROCK_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
-            Object.WALL_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8))
-        })
+        # self.observation_space = Dict({
+        #     Object.BABA.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.FLAG.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.WALL.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.ROCK.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.PUSH_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.STOP_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.YOU_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.WIN_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.IS_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.BABA_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.FLAG_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.ROCK_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
+        #     Object.WALL_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8))
+        # })
+
+        state = hardcoded_level_1()
+        objects = np.count_nonzero(state)
+        
+        self.observation_space = Box(low=0, high=np.array([[width, height, objects] for _ in range(objects)]), shape=(objects,3), dtype=np.int64)
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         self.action_space = Discrete(4)
@@ -169,8 +176,9 @@ class GridWorldEnv(gym.Env):
         }
     
     def _get_obs(self):
-        return {k:[np.array([x,y]) for (x,y,_) in v] for k,v in self.state.items()}
-
+        observation = [np.array([x,y,k]) for k in self.state.keys() for (x,y,_) in self.state[k]]
+        return np.array(observation)
+            
     def _get_reward(self):
         if self.check_win_condition():
             return 100
@@ -182,9 +190,9 @@ class GridWorldEnv(gym.Env):
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
         super().reset(seed=seed)
-        self.state = {k:[] for k in self.objects.keys()}
+        self.state = {k:[] for k in range(1, len(self.objects.keys()))}
         object_identifier = 0
-        state = level_1()
+        state = hardcoded_level_1()
         # self.state = state
         for x in range(self.width):
             for y in range(self.height):
@@ -249,7 +257,7 @@ class GridWorldEnv(gym.Env):
         check_next = False
         
         # Check if the next position is within grid bounds
-        if np.any(next_location < 0) or np.any(next_location >= self.observation_space.shape[:2]):
+        if np.any(next_location < 0) or next_location[0] > self.width - 1 or next_location[1] > self.height - 1:
             self.backtrack(current_location, direction, flagged_objects)
             return 0  # Out of bounds
         
@@ -382,7 +390,7 @@ class GridWorldEnv(gym.Env):
                         )
         you_objects = [obj_type for (obj_type, _) in self.get_you_objects()]
         win_objects = [obj_type for (obj_type, _) in self.get_win_objects()]
-        for obj_type in self.objects.keys():
+        for obj_type in self.state.keys():
             if obj_type not in you_objects and obj_type not in win_objects:
                 for (x, y, _) in self.state[obj_type]:
                     canvas.blit(self.obj_imgs[obj_type], pygame.Rect(
@@ -426,7 +434,7 @@ class GridWorldEnv(gym.Env):
 
 
 if __name__ == "__main__":
-    env = GridWorldEnv(render_mode="human", width=17, height=15)
+    env = BABAWorldEnv(render_mode="human", width=17, height=15)
     env.reset()
     terminated = False
     action_map = {

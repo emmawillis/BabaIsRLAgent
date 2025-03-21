@@ -1,3 +1,5 @@
 gymnasium
 pygame
 numpy
+stable-baselines3
+opencv-python
