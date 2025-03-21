@@ -1,6 +1,6 @@
 from baba_levels import level_1
 import gymnasium as gym
-from gymnasium import spaces
+from gymnasium.spaces import Dict, Sequence, Box, Discrete
 import pygame
 import numpy as np
 from game_objects import Actions, Object, ObjectState
@@ -56,10 +56,25 @@ class GridWorldEnv(gym.Env):
         # Observations are dictionaries
         # Each location is encoded as an element of {0, ..., `size`}^2,
         # i.e. MultiDiscrete([size, size]).
-        self.observation_space = spaces.Box(low=0, high=len(self.objects) - 1, shape=(width, height), dtype=np.uint8) # TODO: maybe change this?
+        
+        self.observation_space = Dict({
+            Object.BABA.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.FLAG.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.WALL.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.ROCK.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.PUSH_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.STOP_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.YOU_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.WIN_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.IS_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.BABA_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.FLAG_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.ROCK_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8)),
+            Object.WALL_TEXT.value: Sequence(Box(Low=np.array([0,0]), High=np.array([width, height]), dtype=np.uint8))
+        })
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
-        self.action_space = spaces.Discrete(4)
+        self.action_space = Discrete(4)
 
         """
         The following dictionary maps abstract actions from `self.action_space` to 
@@ -152,6 +167,17 @@ class GridWorldEnv(gym.Env):
             #     self._agent_location - self._target_location, ord=1
             # )
         }
+    
+    def _get_obs(self):
+        return {k:[np.array([x,y]) for (x,y,_) in v] for k,v in self.state.items()}
+
+    def _get_reward(self):
+        if self.check_win_condition():
+            return 100
+        elif self.check_lose_condition():
+            return -100
+        else:
+            return -1
 
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
@@ -171,7 +197,7 @@ class GridWorldEnv(gym.Env):
         if self.render_mode == "human":
             self._render_frame()
 
-        observation = self.state
+        observation = self._get_obs()
         info = self._get_info()
         return observation, info
 
@@ -324,8 +350,8 @@ class GridWorldEnv(gym.Env):
 
         # An episode is done if any 'you' is on top of any 'win' object
         terminated = self.check_win_condition() or self.check_lose_condition()
-        reward = 1 if terminated else 0  # TODO figure out ideal rewards (if move creates a useful rule that should be rewarded)
-        observation = self.state # TODO maybe need to change this to only include locaitons, not the ids
+        reward = self._get_reward()
+        observation = self._get_obs()
         info = self._get_info()
 
         if self.render_mode == "human":
@@ -400,14 +426,14 @@ class GridWorldEnv(gym.Env):
 
 
 if __name__ == "__main__":
-    env = GridWorldEnv(render_mode="human", width=33, height=18)
+    env = GridWorldEnv(render_mode="human", width=17, height=15)
     env.reset()
     terminated = False
     action_map = {
         pygame.K_RIGHT: Actions.right.value,
         pygame.K_UP: Actions.down.value,
         pygame.K_LEFT: Actions.left.value,
-        pygame.K_DOWN: Actions.up.value # TODO whats up with up and down
+        pygame.K_DOWN: Actions.up.value 
     }
 
     while not terminated:
