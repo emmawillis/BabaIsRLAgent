@@ -190,6 +190,12 @@ class GridWorldEnv(gym.Env):
             return True
         return False 
     
+    def check_lose_condition(self):
+        # checking if there are no objects with the property 'YOU'
+        if not self.get_you_objects():
+            return True
+        return False 
+    
     # backtracking a move that is not valid
     def backtrack(self, current_location, direction, flagged_objects, backtracked_objects=None):
         recurse = False
@@ -317,7 +323,7 @@ class GridWorldEnv(gym.Env):
         self.update_rules()
 
         # An episode is done if any 'you' is on top of any 'win' object
-        terminated = self.check_win_condition()
+        terminated = self.check_win_condition() or self.check_lose_condition()
         reward = 1 if terminated else 0  # TODO figure out ideal rewards (if move creates a useful rule that should be rewarded)
         observation = self.state # TODO maybe need to change this to only include locaitons, not the ids
         info = self._get_info()
