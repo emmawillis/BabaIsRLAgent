@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import os
 import json
-from game_objects import Object
+from .game_objects import Object
 
 image_to_key = {
     "baba": Object.BABA,
@@ -21,7 +21,7 @@ image_to_key = {
     "is_text": Object.IS_TEXT,
 }
 
-def split_into_grid(image, grid_size=(33, 18)):
+def split_into_grid(image, grid_size=(17, 15)):
     """Splits an image into a 33x18 grid of cells."""
     h, w = image.shape[:2]
     cell_width = w // grid_size[0]

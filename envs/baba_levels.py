@@ -16,7 +16,7 @@ def hardcoded_level_1():
         state[x, 5] = Object.WALL.value
         state[x, 9] = Object.WALL.value
     
-    state[3, 7] = Object.BABA.value
+    state[3, 6] = Object.BABA.value
     state[12, 7] = Object.FLAG.value
 
     # column of rocks between baba and flag
