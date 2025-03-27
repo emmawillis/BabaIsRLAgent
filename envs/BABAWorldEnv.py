@@ -8,7 +8,8 @@ from .game_objects import Actions, Object, ObjectState
 class BABAWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, width=17, height=15, level=hardcoded_level_1):
+    def __init__(self, render_mode=None, width=17, height=15, level=hardcoded_level_1()):
+        self.level = level
         self.width = width
         self.height = height
 
@@ -75,8 +76,7 @@ class BABAWorldEnv(gym.Env):
         #     Object.WALL_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8))
         # })
 
-        state = hardcoded_level_1()
-        objects = np.count_nonzero(state)
+        objects = np.count_nonzero(level)
         
         self.observation_space = Box(low=0, high=np.array([[width, height, objects] for _ in range(objects)]), shape=(objects,3), dtype=np.int64)
 
@@ -192,7 +192,7 @@ class BABAWorldEnv(gym.Env):
         super().reset(seed=seed)
         self.state = {k:[] for k in range(1, len(self.objects.keys()))}
         object_identifier = 0
-        state = hardcoded_level_1()
+        state = self.level
         # self.state = state
         for x in range(self.width):
             for y in range(self.height):
