@@ -2,3 +2,10 @@
 venv/
 ronny_test.py
 __pycache__
+envs/__pycache__/
+*.pyc
+envs/*.pyc
+.DS_Store
+envs/__pycache__/__init__.cpython-313.pyc
+envs/__pycache__/game_objects.cpython-313.pyc
+envs/__pycache__/baba_levels.cpython-313.pyc

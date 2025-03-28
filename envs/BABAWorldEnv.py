@@ -1,4 +1,4 @@
-from .baba_levels import level_1, hardcoded_level_1
+from .baba_levels import level, hardcoded_level_1
 import gymnasium as gym
 from gymnasium.spaces import Dict, Sequence, Box, Discrete
 import pygame
@@ -8,10 +8,10 @@ from .game_objects import Actions, Object, ObjectState
 class BABAWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, width=17, height=15, level=hardcoded_level_1()):
-        self.level = level
+    def __init__(self, render_mode=None, width=17, height=15, level=1):
         self.width = width
         self.height = height
+        self.level = level
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
@@ -94,6 +94,7 @@ class BABAWorldEnv(gym.Env):
             Actions.left.value: np.array([-1, 0]),
             Actions.down.value: np.array([0, -1]),
         }
+        self.reset()
 
     def load_images(self):
         babaImg = pygame.image.load('imgs/baba.png')
@@ -192,7 +193,7 @@ class BABAWorldEnv(gym.Env):
         super().reset(seed=seed)
         self.state = {k:[] for k in range(1, len(self.objects.keys()))}
         object_identifier = 0
-        state = self.level
+        state = level(self.level, grid_size=(self.width, self.height))
         # self.state = state
         for x in range(self.width):
             for y in range(self.height):
@@ -434,7 +435,7 @@ class BABAWorldEnv(gym.Env):
 
 
 if __name__ == "__main__":
-    env = BABAWorldEnv(render_mode="human", width=17, height=15)
+    env = BABAWorldEnv(render_mode="human", level=1, width=17, height=15)
     env.reset()
     terminated = False
     action_map = {

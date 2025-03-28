@@ -1,11 +1,20 @@
-import json
 import numpy as np
 from .game_objects import Object
-from .level_utils import get_level_from_screenshot
+from .level_utils import get_level_from_json, get_level_from_screenshot
+import os.path
 
-def level_1():
-    return get_level_from_screenshot("envs/levels/level_1.png", (17, 15), "imgs")
+def level(number, grid_size=(17, 15)):
+    json_name = f"envs/levels/level_{number}.json"
+    if os.path.isfile(json_name):
+        return get_level_from_json(json_name)
 
+    return get_level_from_screenshot(
+        f"envs/levels/level_{number}.png", 
+        grid_size, 
+        "imgs", 
+        should_save=True, 
+        output_filename=json_name # saving json for faster loading
+    )
 
 # just for testing:
 def hardcoded_level_1():
