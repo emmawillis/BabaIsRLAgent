@@ -3,7 +3,7 @@ from .game_objects import Object
 from .level_utils import get_level_from_json, get_level_from_screenshot
 import os.path
 
-def level(number, grid_size=(17, 15)):
+def level_grid(number, grid_size=(17, 15)):
     json_name = f"envs/levels/level_{number}.json"
     if os.path.isfile(json_name):
         return get_level_from_json(json_name)

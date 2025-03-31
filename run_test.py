@@ -1,5 +1,5 @@
 import envs
-from stable_baselines3 import A2C
+from stable_baselines3 import A2C, DQN
 from stable_baselines3.common.env_checker import check_env
 import numpy as np
 from time import sleep
@@ -10,23 +10,35 @@ import numpy as np
 from gymnasium.wrappers import TimeLimit
 
 
-env = envs.BABAWorldEnv()
+env = envs.BABAWorldEnv(level=1, train=True)
 wrapped_env = TimeLimit(env, max_episode_steps=100)
 
 
-model = A2C("MlpPolicy", wrapped_env, device="cpu")
-model = model.learn(total_timesteps=50000)
+model = DQN("MlpPolicy", wrapped_env, device="cpu")
+model = model.learn(total_timesteps=20000, progress_bar=True)
 
-env = envs.BABAWorldEnv(render_mode="human")
+env = envs.BABAWorldEnv(render_mode="human", level=1, train=True)
 obs,_ = env.reset()
 done = False
+steps = 0
 while not done:
     action, _ = model.predict(obs, deterministic=True)
     obs, reward, done, _, _ = env.step(int(action))
     env.render()
     print(f"Action: {action}, Reward: {reward}")
-    if done:
-        obs = env.reset()
+    steps += 1
+    if steps > 20:
+        env.reset()
+        steps = 0
+        sleep(1)
+# env = envs.BABAWorldEnv(render_mode="human", level=2, train=False)
+# obs,_ = env.reset()
+# done = False
+# while not done:
+#     action, _ = model.predict(obs, deterministic=True)
+#     obs, reward, done, _, _ = env.step(int(action))
+#     env.render()
+#     print(f"Action: {action}, Reward: {reward}")
 
 # env = envs.BABAWorldEnv(render_mode="human", width=17, height=15)
 # env.reset()

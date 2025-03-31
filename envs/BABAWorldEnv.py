@@ -1,4 +1,5 @@
-from .baba_levels import level, hardcoded_level_1
+from .baba_levels import level_grid, hardcoded_level_1
+from .level_randomization import Randomizer
 import gymnasium as gym
 from gymnasium.spaces import Dict, Sequence, Box, Discrete
 import pygame
@@ -8,10 +9,14 @@ from .game_objects import Actions, Object, ObjectState
 class BABAWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, width=17, height=15, level=1):
+    def __init__(self, render_mode=None, width=17, height=15, level=1, train=True):
         self.width = width
         self.height = height
         self.level = level
+        if train:
+            self.randomizer = Randomizer(level_grid(self.level, grid_size=(width, height)))
+        else:
+            self.randomizer = None
 
         assert render_mode is None or render_mode in self.metadata["render_modes"]
         self.render_mode = render_mode
@@ -56,29 +61,8 @@ class BABAWorldEnv(gym.Env):
             Object.WALL_TEXT.value: ObjectState(Object.WALL_TEXT, paired_object_key=Object.WALL.value, immutable_rules=["push"]),
         }
 
-        # Observations are dictionaries
-        # Each location is encoded as an element of {0, ..., `size`}^2,
-        # i.e. MultiDiscrete([size, size]).
         
-        # self.observation_space = Dict({
-        #     Object.BABA.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.FLAG.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.WALL.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.ROCK.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.PUSH_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.STOP_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.YOU_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.WIN_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.IS_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.BABA_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.FLAG_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.ROCK_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8)),
-        #     Object.WALL_TEXT.value: Sequence(Box(low=np.array([0,0]), high=np.array([width, height]), dtype=np.uint8))
-        # })
-
-        objects = np.count_nonzero(level)
-        
-        self.observation_space = Box(low=0, high=np.array([[width, height, objects] for _ in range(objects)]), shape=(objects,3), dtype=np.int64)
+        self.observation_space = Box(low=-1, high=np.array([[width, height, len(self.objects)] for _ in range(width*height)]), shape=(width*height,3), dtype=np.int64)
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
         self.action_space = Discrete(4)
@@ -178,6 +162,8 @@ class BABAWorldEnv(gym.Env):
     
     def _get_obs(self):
         observation = [np.array([x,y,k]) for k in self.state.keys() for (x,y,_) in self.state[k]]
+        for _ in range(self.width*self.height-len(observation)):
+            observation.append(np.array([-1,-1,-1]))
         return np.array(observation)
             
     def _get_reward(self):
@@ -193,7 +179,11 @@ class BABAWorldEnv(gym.Env):
         super().reset(seed=seed)
         self.state = {k:[] for k in range(1, len(self.objects.keys()))}
         object_identifier = 0
-        state = level(self.level, grid_size=(self.width, self.height))
+        if self.randomizer:
+            self.randomizer.reshuffle_level()
+            state = self.randomizer.new_state
+        else:
+            state = level_grid(self.level, grid_size=(self.width, self.height))
         # self.state = state
         for x in range(self.width):
             for y in range(self.height):

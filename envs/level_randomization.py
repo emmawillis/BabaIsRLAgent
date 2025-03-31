@@ -1,7 +1,6 @@
-from envs.game_objects import Object
-from envs.baba_levels import hardcoded_level_1
-import envs
-import pygame
+from .game_objects import Object
+# import envs
+# import pygame
 import random
 import numpy as np
 
@@ -99,35 +98,36 @@ class Randomizer:
 
 
 if __name__ == "__main__":
-    randomizer = Randomizer(hardcoded_level_1())
-    randomizer.reshuffle_level()
+    # randomizer = Randomizer(hardcoded_level_1())
+    # randomizer.reshuffle_level()
 
-    env = envs.BABAWorldEnv(render_mode="human", width=17, height=15, level=randomizer.new_state)
-    env.reset()
-    terminated = False
-    action_map = {
-        pygame.K_RIGHT: envs.Actions.right.value,
-        pygame.K_UP: envs.Actions.down.value,
-        pygame.K_LEFT: envs.Actions.left.value,
-        pygame.K_DOWN: envs.Actions.up.value 
-    }
+    # env = envs.BABAWorldEnv(render_mode="human", width=17, height=15, level=randomizer.new_state)
+    # env.reset()
+    # terminated = False
+    # action_map = {
+    #     pygame.K_RIGHT: envs.Actions.right.value,
+    #     pygame.K_UP: envs.Actions.down.value,
+    #     pygame.K_LEFT: envs.Actions.left.value,
+    #     pygame.K_DOWN: envs.Actions.up.value 
+    # }
 
-    while not terminated:
-        action = None
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                terminated = True
-            if event.type == pygame.KEYDOWN:
-                if event.key in action_map:
-                    action = action_map[event.key]
+    # while not terminated:
+    #     action = None
+    #     for event in pygame.event.get():
+    #         if event.type == pygame.QUIT:
+    #             terminated = True
+    #         if event.type == pygame.KEYDOWN:
+    #             if event.key in action_map:
+    #                 action = action_map[event.key]
                 
-                if event.key == pygame.K_ESCAPE:
-                    terminated = True
+    #             if event.key == pygame.K_ESCAPE:
+    #                 terminated = True
 
-        if action is not None:
-            result = env.step(action)
-            terminated = terminated or result[2]
+    #     if action is not None:
+    #         result = env.step(action)
+    #         terminated = terminated or result[2]
 
-        env.render()
+    #     env.render()
 
-    env.close()
+    # env.close()
+    pass

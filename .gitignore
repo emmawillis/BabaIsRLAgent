@@ -1,5 +1,6 @@
 .venv/
 venv/
+baba_env/
 ronny_test.py
 __pycache__
 envs/__pycache__/
