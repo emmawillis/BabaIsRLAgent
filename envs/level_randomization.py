@@ -5,7 +5,7 @@ import random
 import numpy as np
 
 class Randomizer:
-    def __init__(self, level_state, you_object_value: int = Object.BABA.value):
+    def __init__(self, level_state, you_object_value: int):
         self.level_state = level_state
         self.you_object_value = you_object_value
 

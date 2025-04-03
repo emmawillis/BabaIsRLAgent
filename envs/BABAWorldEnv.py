@@ -219,7 +219,10 @@ class BABAWorldEnv(gym.Env):
         self.state = {k:[] for k in range(1, len(self.objects.keys()))}
         object_identifier = 0
         if self.randomizer:
-            self.randomizer.reshuffle_object()
+            if self.randomizer.you_object_value:
+                self.randomizer.reshuffle_object()
+            else:
+                self.randomizer.reshuffle_level()
             state = self.randomizer.new_state
         else:
             state = level_grid(self.level, grid_size=(self.width, self.height))
