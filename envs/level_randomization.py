@@ -5,8 +5,9 @@ import random
 import numpy as np
 
 class Randomizer:
-    def __init__(self, level_state):
+    def __init__(self, level_state, you_object_value: int = Object.BABA.value):
         self.level_state = level_state
+        self.you_object_value = you_object_value
 
     def reset(self):
         self.new_state = np.zeros((17, 15), dtype='uint8')
@@ -43,10 +44,10 @@ class Randomizer:
             if self.objects[val] > 0:
                 self.avail_adjs.append(val)
 
-        if len(self.avail_nouns) != len(self.avail_adjs):
-            return ValueError("The number of nouns and adjectives in the provided level do not match.")
-        if len(self.avail_nouns) != self.objects[Object.IS_TEXT.value]:
-            return ValueError("The number of nouns/paired adjectives and 'IS' blocks in the provided level do not match.")
+        # if len(self.avail_nouns) != len(self.avail_adjs):
+        #     return ValueError("The number of nouns and adjectives in the provided level do not match.")
+        # if len(self.avail_nouns) != self.objects[Object.IS_TEXT.value]:
+        #     return ValueError("The number of nouns/paired adjectives and 'IS' blocks in the provided level do not match.")
 
     def add_to_state(self, row, col, obj):
         self.new_state[row][col] = obj
@@ -80,11 +81,27 @@ class Randomizer:
         self.add_to_state(rand_x, rand_y + 1, is_t)
         self.add_to_state(rand_x, rand_y + 2, adj)
 
+    # only move you objects in the level
+    # note that this implementation assumes that there is only one object of type you in the level
+    # e.g. we can have "rock is you" but not "rock is you and baba is you"
+    def reshuffle_object(self):
+        self.new_state = self.level_state
+        # find you objects in the level
+        you_locs = np.where(self.new_state == self.you_object_value)
+        # flip because numpy returns results as a list of rows and a list of columns
+        you_locs = [(you_locs[0][i], you_locs[1][i]) for i in range(len(you_locs[0]))]
+
+        for loc in you_locs:
+            self.new_state[loc[0]][loc[1]] = Object.BACKGROUND.value
+            rand_x, rand_y = self.get_random_cell()
+            self.new_state[rand_x][rand_y] = self.you_object_value
+
+    # reshuffle the entire level
     def reshuffle_level(self):
         # reset from previous run
         self.reset()
         # create ALL text strings
-        while self.avail_nouns:
+        while self.avail_nouns and self.avail_adjs:
             noun = random.choice(self.avail_nouns)
             adj = random.choice(self.avail_adjs)
             self.add_text_string_to_state([noun, Object.IS_TEXT.value, adj])

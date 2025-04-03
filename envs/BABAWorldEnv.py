@@ -9,12 +9,12 @@ from .game_objects import Actions, Object, ObjectState
 class BABAWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
-    def __init__(self, render_mode=None, width=17, height=15, level=1, train=True):
+    def __init__(self, render_mode="human", width=17, height=15, level=1, train=True, object_to_shuffle: int=Object.BABA.value):
         self.width = width
         self.height = height
         self.level = level
         if train:
-            self.randomizer = Randomizer(level_grid(self.level, grid_size=(width, height)))
+            self.randomizer = Randomizer(level_grid(self.level, grid_size=(width, height)), object_to_shuffle)
         else:
             self.randomizer = None
 
@@ -61,7 +61,7 @@ class BABAWorldEnv(gym.Env):
             Object.WALL_TEXT.value: ObjectState(Object.WALL_TEXT, paired_object_key=Object.WALL.value, immutable_rules=["push"]),
         }
 
-        
+        # num_objects = np.count_nonzero()
         self.observation_space = Box(low=-1, high=np.array([[width, height, len(self.objects)] for _ in range(width*height)]), shape=(width*height,3), dtype=np.int64)
 
         # We have 4 actions, corresponding to "right", "up", "left", "down", "right"
@@ -78,6 +78,7 @@ class BABAWorldEnv(gym.Env):
             Actions.left.value: np.array([-1, 0]),
             Actions.down.value: np.array([0, -1]),
         }
+        self.visited_states = set()
         self.reset()
 
     def load_images(self):
@@ -167,12 +168,50 @@ class BABAWorldEnv(gym.Env):
         return np.array(observation)
             
     def _get_reward(self):
+        # get all the changes between states
+        # convert to regular list for easier comparison
+        obs = [list(x) for x in self._get_obs()]
+        prev_obs = [list(x) for x in self.prev_obs]
+        changes = [x for x in obs if x not in prev_obs]
+
+        # rewards for win/lose conditions
         if self.check_win_condition():
             return 100
         elif self.check_lose_condition():
+            return -1000
+        # punish the agent for not changing the stsate
+        elif not changes:
             return -100
-        else:
-            return -1
+
+        reward = 0
+        # from Chat GPT
+        # Distance to nearest WIN object
+        you_positions = [pos for obj_type in self.get_you_objects()
+                        for pos in self.get_object_type_locations(obj_type[0])]
+        win_positions = [pos for obj_type in self.get_win_objects()
+                        for pos in self.get_object_type_locations(obj_type[0])]
+        if you_positions and win_positions:
+            distances = [np.linalg.norm(np.array(y) - np.array(w), ord=1)
+                        for y in you_positions for w in win_positions]
+            min_distance = min(distances)
+            reward -= min_distance  # Normalize distance to reward
+
+        # reward the agent for moving text
+        for loc_and_obj in changes:
+            if loc_and_obj[2] in [Object.PUSH_TEXT.value, Object.STOP_TEXT.value, Object.YOU_TEXT.value, Object.WIN_TEXT.value, Object.IS_TEXT.value, Object.BABA_TEXT.value, Object.ROCK_TEXT.value, Object.FLAG_TEXT.value, Object.WALL_TEXT.value]:
+                reward += 10
+
+        for obj in self.objects:
+            # if the object has a new rule, reward the agent
+            if len(self.objects[obj].user_rules) > len(self.prev_object_rules[obj]):
+                # changing rules for "you" or "win" is a big reward
+                if obj in [Object.YOU_TEXT.value, Object.WIN_TEXT.value]:
+                    reward += 50
+                else:
+                    reward += 25
+
+        return reward
+
 
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random
@@ -180,7 +219,7 @@ class BABAWorldEnv(gym.Env):
         self.state = {k:[] for k in range(1, len(self.objects.keys()))}
         object_identifier = 0
         if self.randomizer:
-            self.randomizer.reshuffle_level()
+            self.randomizer.reshuffle_object()
             state = self.randomizer.new_state
         else:
             state = level_grid(self.level, grid_size=(self.width, self.height))
@@ -335,6 +374,7 @@ class BABAWorldEnv(gym.Env):
         return
 
     def step(self, action):
+        self.prev_obs = self._get_obs()
         # Map the action (element of {0,1,2,3}) to the delta in coordinates
         direction = self._action_to_direction[action]
         starting_locations = set()
@@ -345,6 +385,7 @@ class BABAWorldEnv(gym.Env):
 
         self.handle_move(starting_locations, direction)
         
+        self.prev_object_rules = {obj: self.objects[obj].user_rules for obj in self.objects}
         self.update_rules()
 
         # An episode is done if any 'you' is on top of any 'win' object

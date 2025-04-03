@@ -1,5 +1,6 @@
 gymnasium
 pygame
 numpy
-stable-baselines3
+stable-baselines3[extra]
 opencv-python
+matplotlib
