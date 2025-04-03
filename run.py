@@ -6,11 +6,11 @@ from gymnasium.wrappers import TimeLimit
 from envs.game_objects import Object
 
 
-def learn_decaying_epsilon(level: int, train: bool = True, object_to_shuffle: int = Object.BABA.value):
+def learn_decaying_epsilon(alg, level: int, train: bool = True, object_to_shuffle: int = None):
     env = envs.BABAWorldEnv(render_mode=None, level=level, train=train, object_to_shuffle=object_to_shuffle)
     wrapped_env = TimeLimit(env, max_episode_steps=int(1e4))
 
-    model = DQN("MlpPolicy", wrapped_env, device="cpu")
+    model = alg("MlpPolicy", wrapped_env, device="cpu")
 
     # from ChatGPT
     # Train in small steps, reducing epsilon manually
@@ -20,7 +20,7 @@ def learn_decaying_epsilon(level: int, train: bool = True, object_to_shuffle: in
         model.exploration_rate = max(0.1, model.exploration_rate * 0.9)  # Decay epsilon manually
     return model
 
-def evaluate_model(model, level: int, train: bool = True, object_to_shuffle: int = Object.BABA.value):
+def evaluate_model(model, level: int, train: bool = True, object_to_shuffle: int = None):
     env = envs.BABAWorldEnv(level=level, train=train, object_to_shuffle=object_to_shuffle)
     obs,_ = env.reset()
     done = False
@@ -37,7 +37,7 @@ def evaluate_model(model, level: int, train: bool = True, object_to_shuffle: int
             sleep(3)
             print()
 
-def run_manually(level: int=1, train: bool = False, object_to_shuffle: int = Object.BABA.value):
+def run_manually(level: int=1, train: bool = False, object_to_shuffle: int = None):
     env = envs.BABAWorldEnv(level=level, train=train, object_to_shuffle=object_to_shuffle)
     env.reset()
     terminated = False
@@ -69,5 +69,8 @@ def run_manually(level: int=1, train: bool = False, object_to_shuffle: int = Obj
     env.close()
 
 if __name__ == "__main__":
-    model = learn_decaying_epsilon(level=1, train=False, object_to_shuffle=Object.BABA.value)
+    object_to_shuffle = Object.BABA.value
+    # run_manually(level=1, train=True, object_to_shuffle=object_to_shuffle)
+    
+    model = learn_decaying_epsilon(A2C, level=1, train=True, object_to_shuffle=object_to_shuffle)
     evaluate_model(model, level=1, train=False)
