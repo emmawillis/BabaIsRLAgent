@@ -10,20 +10,12 @@ import os
 from enum import Enum
 from envs.reward_schemes import DEFAULT_REWARDS, EXPLORATION_FOCUS, TEXT_FOCUS, RULE_FOCUS, DISTANCE_FOCUS
 
-REWARD_CONFIG = {
-    "win_bonus": 100,
-    "lose_penalty": -500,
-    "nochange_penalty": -5,
-    "text_move": 20,
-    "text_rule": 50,
-    "you_win_rule": 75,
-    "distance_weight": -0.2,
-}
+CONFIG = DISTANCE_FOCUS # change this to experiment
 
 def learn_decaying_epsilon(alg, level: int, train: bool = True, object_to_shuffle: int = None, rewards = None):
     env = envs.BABAWorldEnv(render_mode=None, level=level, train=train, 
                             object_to_shuffle=object_to_shuffle, rewards=rewards,
-                            reward_config=EXPLORATION_FOCUS)
+                            reward_config=CONFIG)
     wrapped_env = TimeLimit(env, max_episode_steps=int(1e4))
 
     model = alg("MlpPolicy", wrapped_env, device="cpu")
@@ -34,7 +26,9 @@ def learn_decaying_epsilon(alg, level: int, train: bool = True, object_to_shuffl
         model.learn(total_timesteps=5000, progress_bar=True)
 
         # Evaluate model after training chunk
-        eval_env = envs.BABAWorldEnv(render_mode=None, level=level, train=False, object_to_shuffle=object_to_shuffle)
+        eval_env = envs.BABAWorldEnv(render_mode=None, level=level, train=False, 
+                                    object_to_shuffle=object_to_shuffle, rewards=rewards,
+                                    reward_config=CONFIG)
         obs, _ = eval_env.reset()
         done = False
         total_reward = 0
@@ -64,7 +58,7 @@ def learn_decaying_epsilon(alg, level: int, train: bool = True, object_to_shuffl
     xs, ys = zip(*reward_log)
     plt.figure(figsize=(8, 5))
     plt.plot(xs, ys, marker='o', linestyle='-', linewidth=2)
-    plt.title('Reward per Training Epoch')
+    plt.title(f'{alg.__name__} - Reward per Training Epoch')
     plt.xlabel('Epoch')
     plt.ylabel('Total Reward')
     plt.grid(True)
@@ -77,8 +71,10 @@ def learn_decaying_epsilon(alg, level: int, train: bool = True, object_to_shuffl
 
     return model
 
-def evaluate_model(model, level: int, train: bool = True, object_to_shuffle: int = None):
-    env = envs.BABAWorldEnv(level=level, train=train, object_to_shuffle=object_to_shuffle)
+def evaluate_model(model, level: int, train: bool = True, object_to_shuffle: int = None, rewards = None):  
+    env = envs.BABAWorldEnv(level=level, train=train, object_to_shuffle=object_to_shuffle, 
+                            rewards=rewards,
+                            reward_config=CONFIG)
     obs,_ = env.reset()
     done = False
     steps = 0
@@ -94,8 +90,9 @@ def evaluate_model(model, level: int, train: bool = True, object_to_shuffle: int
             sleep(3)
             print()
 
-def run_manually(level: int=1, train: bool = False, object_to_shuffle: int = None):
-    env = envs.BABAWorldEnv(level=level, train=train, object_to_shuffle=object_to_shuffle)
+def run_manually(level: int=1, train: bool = False, object_to_shuffle: int = None, rewards = None):
+    env = envs.BABAWorldEnv(level=level, train=train, object_to_shuffle=object_to_shuffle, rewards=rewards,
+                            reward_config=CONFIG), 
     env.reset()
     terminated = False
     action_map = {
@@ -150,4 +147,4 @@ if __name__ == "__main__":
     }
 
     model = learn_decaying_epsilon(alg_2_class[args.alg.lower()], level=args.level, train=True, object_to_shuffle=object_to_shuffle, rewards = args.rewards)
-    evaluate_model(model, level=args.level, train=False)
+    evaluate_model(model, level=args.level, train=False, rewards=args.rewards)

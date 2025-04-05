@@ -57,5 +57,5 @@ DISTANCE_FOCUS = {
     "text_move": 2,
     "text_rule": 10,
     "you_win_rule": 20,
-    "distance_weight": -1.0,
+    "distance_weight": -2.0,
 }
