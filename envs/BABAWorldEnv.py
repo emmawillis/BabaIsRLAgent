@@ -5,14 +5,17 @@ from gymnasium.spaces import Dict, Sequence, Box, Discrete
 import pygame
 import numpy as np
 from .game_objects import Actions, Object, ObjectState
+from .reward_schemes import DEFAULT_REWARDS
+
 
 class BABAWorldEnv(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 4}
 
     def __init__(self, render_mode="human", width=17, height=15, level=1, 
-                 train=True, object_to_shuffle: int=Object.BABA.value, 
-                 rewards = ["winlose", "nochange", "movetext", "distance"]
-        ):
+                train=True, object_to_shuffle: int=Object.BABA.value, 
+                rewards=["winlose", "nochange", "movetext", "distance"],
+                reward_config=None):
+
         self.width = width
         self.height = height
         self.level = level
@@ -21,6 +24,11 @@ class BABAWorldEnv(gym.Env):
         else:
             self.rewards = rewards
         
+        if reward_config is None:
+            self.reward_config = DEFAULT_REWARDS
+        else:
+            self.reward_config = reward_config
+
         if train:
             self.randomizer = Randomizer(level_grid(self.level, grid_size=(width, height)), object_to_shuffle)
         else:
@@ -176,55 +184,50 @@ class BABAWorldEnv(gym.Env):
         return np.array(observation)
             
     def _get_reward(self):
-        # get all the changes between states
-        # convert to regular list for easier comparison
+        config = self.reward_config
         obs = [list(x) for x in self._get_obs()]
         prev_obs = [list(x) for x in self.prev_obs]
         changes = [x for x in obs if x not in prev_obs]
 
-        # rewards for win/lose conditions
-        if "winlose" in self.rewards:
-            if self.check_win_condition():
-                return 100
-            elif self.check_lose_condition():
-                return -1000
-            
-        # punish the agent for not changing the state
-        if "nochange" in self.rewards and not changes:
-                return -100
-
         reward = 0
 
-        # reward the agent for moving text
+        if "winlose" in self.rewards:
+            if self.check_win_condition():
+                return config["win_bonus"]
+            elif self.check_lose_condition():
+                return config["lose_penalty"]
+
+        if "nochange" in self.rewards and not changes:
+            reward += config["nochange_penalty"]
+
         if "movetext" in self.rewards:
             for loc_and_obj in changes:
-                if loc_and_obj[2] in [Object.PUSH_TEXT.value, Object.STOP_TEXT.value, Object.YOU_TEXT.value, Object.WIN_TEXT.value, Object.IS_TEXT.value, Object.BABA_TEXT.value, Object.ROCK_TEXT.value, Object.FLAG_TEXT.value, Object.WALL_TEXT.value]:
-                    reward += 10
+                if loc_and_obj[2] in [
+                    Object.PUSH_TEXT.value, Object.STOP_TEXT.value, Object.YOU_TEXT.value,
+                    Object.WIN_TEXT.value, Object.IS_TEXT.value, Object.BABA_TEXT.value,
+                    Object.ROCK_TEXT.value, Object.FLAG_TEXT.value, Object.WALL_TEXT.value
+                ]:
+                    reward += config["text_move"]
 
             for obj in self.objects:
-                # if the object has a new rule, reward the agent
                 if len(self.objects[obj].user_rules) > len(self.prev_object_rules[obj]):
-                    # changing rules for "you" or "win" is a big reward
                     if obj in [Object.YOU_TEXT.value, Object.WIN_TEXT.value]:
-                        reward += 50
+                        reward += config["you_win_rule"]
                     else:
-                        reward += 25
+                        reward += config["text_rule"]
 
-        # Distance to nearest WIN object
         if "distance" in self.rewards:
             you_positions = [pos for obj_type in self.get_you_objects()
-                            for pos in self.get_object_type_locations(obj_type[0])]
+                             for pos in self.get_object_type_locations(obj_type[0])]
             win_positions = [pos for obj_type in self.get_win_objects()
-                            for pos in self.get_object_type_locations(obj_type[0])]
+                             for pos in self.get_object_type_locations(obj_type[0])]
             if you_positions and win_positions:
                 distances = [np.linalg.norm(np.array(y) - np.array(w), ord=1)
-                            for y in you_positions for w in win_positions]
+                             for y in you_positions for w in win_positions]
                 min_distance = min(distances)
-                reward -= min_distance  # Normalize distance to reward
-
+                reward += config["distance_weight"] * min_distance
 
         return reward
-
 
     def reset(self, seed=None, options=None):
         # We need the following line to seed self.np_random

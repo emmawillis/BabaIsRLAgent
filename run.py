@@ -8,9 +8,22 @@ import argparse
 import matplotlib.pyplot as plt
 import os
 from enum import Enum
+from envs.reward_schemes import DEFAULT_REWARDS, EXPLORATION_FOCUS, TEXT_FOCUS, RULE_FOCUS, DISTANCE_FOCUS
+
+REWARD_CONFIG = {
+    "win_bonus": 100,
+    "lose_penalty": -500,
+    "nochange_penalty": -5,
+    "text_move": 20,
+    "text_rule": 50,
+    "you_win_rule": 75,
+    "distance_weight": -0.2,
+}
 
 def learn_decaying_epsilon(alg, level: int, train: bool = True, object_to_shuffle: int = None, rewards = None):
-    env = envs.BABAWorldEnv(render_mode=None, level=level, train=train, object_to_shuffle=object_to_shuffle, rewards=rewards)
+    env = envs.BABAWorldEnv(render_mode=None, level=level, train=train, 
+                            object_to_shuffle=object_to_shuffle, rewards=rewards,
+                            reward_config=EXPLORATION_FOCUS)
     wrapped_env = TimeLimit(env, max_episode_steps=int(1e4))
 
     model = alg("MlpPolicy", wrapped_env, device="cpu")
